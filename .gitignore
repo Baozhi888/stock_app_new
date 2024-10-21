@@ -1,0 +1,10 @@
+# 忽略环境变量文件
+.env
+venv/
+
+
+# Python相关
+*.pyc
+__pycache__/
+*.pyo
+*.pyd

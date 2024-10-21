@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奇点AI股票及股指期货复盘及预测系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #FFF2F2;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+        header, footer {
+            background-color: #FF0000;
+            color: #FFFFFF;
+            text-align: center;
+            padding: 20px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        footer {
+            font-size: 14px;
+            font-weight: normal;
+            padding: 10px;
+        }
+        .container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            font-size: 16px;
+            color: #FF0000;
+            margin-bottom: 5px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #CCCCCC;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            width: auto;
+            margin-right: 5px;
+            margin-bottom: 0;
+        }
+        .symbol-helper {
+            font-size: 12px;
+            color: #666;
+            margin-top: -10px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #FF0000;
+            color: #FFFFFF;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #CC0000;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .section h2 {
+            color: #FF0000;
+            font-size: 20px;
+            margin-top: 0;
+        }
+        .loading-message {
+            font-size: 16px;
+            color: #FF0000;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .image-preview {
+            max-width: 100%;
+            border: 1px solid #CCCCCC;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        .image-preview:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+        .fullscreen-img {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .fullscreen-img img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #FFFFFF;
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>股票、金期指AI数据分析系统(2024.2.8.0)</header>
+    
+    <div class="container">
+        <form id="analysis-form">
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="data-type" value="stock" checked> 股票
+                </label>
+                <label>
+                    <input type="radio" name="data-type" value="futures"> 期货
+                </label>
+                <label>
+                    <input type="radio" name="data-type" value="index"> 指数
+                </label>
+            </div>
+
+            <label for="symbol">代码:</label>
+            <input type="text" id="symbol" name="symbol" required>
+            <div id="symbol-helper" class="symbol-helper">股票代码示例: 000001 / 期货代码示例: if2412 / 指数代码示例: 000300</div>
+
+            <label for="start-date">开始日期:</label>
+            <input type="date" id="start-date" name="start-date" required>
+
+            <label for="end-date">结束日期:</label>
+            <input type="date" id="end-date" name="end-date" required>
+
+            <button type="submit">开始分析</button>
+        </form>
+    </div>
+
+    <div class="loading-message" id="loading-message">正在分析数据，请稍候...</div>
+
+    <div class="container">
+        <div class="section" id="analysis-section" style="display:none;">
+            <h2>分析结果:</h2>
+            <p id="analysis-metadata"></p>
+            <p id="analysis-content">加载中...</p>
+        </div>
+        <div class="section" id="image-section" style="display:none;">
+            <h2>图像展示</h2>
+            <img id="analysis-image" src="" alt="分析图像" class="image-preview">
+        </div>
+        <div class="section" id="json-section" style="display:none;">
+            <h2>数据文件</h2>
+            <a id="json-link" href="" class="json-download" download>下载JSON数据</a>
+        </div>
+    </div>
+
+    <div class="fullscreen-img" id="fullscreen-img">
+        <span class="close-btn" id="close-btn">&times;</span>
+        <img id="fullscreen-image" src="" alt="全屏图像">
+    </div>
+
+    <footer>
+        &copy; 2024 奇点(QiD) 股票AI数据分析系统. All Rights Reserved.
+    </footer>
+
+    <script>
+        // 监听数据类型切换
+        document.getElementsByName('data-type').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const helper = document.getElementById('symbol-helper');
+                if (this.value === 'stock') {
+                    helper.textContent = '股票代码示例: 000001';
+                } else if (this.value === 'futures') {
+                    helper.textContent = '期货代码示例: if2403';
+                } else {
+                    helper.textContent = '指数代码示例: 000300';
+                }
+            });
+        });
+
+        document.getElementById('analysis-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const dataType = document.querySelector('input[name="data-type"]:checked').value;
+            const symbol = document.getElementById('symbol').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            // 显示加载提示
+            const loadingMessage = document.getElementById('loading-message');
+            loadingMessage.style.display = 'block';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/analyze/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        data_type: dataType,  // 添加数据类型
+                        symbol: symbol,
+                        start_date: startDate,
+                        end_date: endDate,
+                        is_index: dataType === 'index'  // 添加is_index字段
+                    })
+                });
+
+                const data = await response.json();
+
+                document.getElementById('analysis-metadata').innerHTML = `
+                    <strong>代码:</strong> ${data.symbol}<br>
+                    <strong>类型:</strong> ${dataType === 'stock' ? '股票' : dataType === 'futures' ? '期货' : '指数'}<br>
+                    <strong>开始日期:</strong> ${data.start_date}<br>
+                    <strong>结束日期:</strong> ${data.end_date}
+                `;
+
+                document.getElementById('analysis-content').innerHTML = formatAnalysis(data.analysis);
+                document.getElementById('analysis-image').src = data.image_path;
+                document.getElementById('json-link').href = data.json_file_url;
+
+                document.getElementById('analysis-section').style.display = 'block';
+                document.getElementById('image-section').style.display = 'block';
+                document.getElementById('json-section').style.display = 'block';
+
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                document.getElementById('analysis-content').innerHTML = '分析内容加载失败。';
+            } finally {
+                loadingMessage.style.display = 'none';
+            }
+        });
+
+        function formatAnalysis(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n\n/g, '<p></p>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // 图片全屏显示相关代码
+        const img = document.getElementById('analysis-image');
+        const fullscreenImg = document.getElementById('fullscreen-img');
+        const fullscreenImage = document.getElementById('fullscreen-image');
+        const closeBtn = document.getElementById('close-btn');
+
+        img.addEventListener('click', function() {
+            fullscreenImage.src = this.src;
+            fullscreenImg.style.display = 'flex';
+        });
+
+        closeBtn.addEventListener('click', function() {
+            fullscreenImg.style.display = 'none';
+        });
+
+        fullscreenImg.addEventListener('click', function(e) {
+            if (e.target === fullscreenImg) {
+                fullscreenImg.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
