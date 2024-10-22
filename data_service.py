@@ -56,6 +56,16 @@ class DataService:
     def _validate_futures_symbol(self, symbol: str) -> str:
         """验证和格式化期货代码"""
         clean_symbol = re.sub(r'\.(CFFEX|SHFE|DCE|CZCE|INE|GFEX)$', '', symbol, flags=re.IGNORECASE)
+        
+        # 检查是否只有品种代码（如 "IF"）
+        if clean_symbol.isalpha():
+            exchange = self.exchange_map.get(clean_symbol.upper())
+            if not exchange:
+                raise ValueError(f"不支持的期货品种: {clean_symbol}")
+            # 返回品种代码和交易所，具体合约会在 get_data 中处理
+            return f"{clean_symbol.upper()}.{exchange}"
+        
+        # 处理完整的合约代码
         match = re.match(r'([A-Za-z]+)(\d+)', clean_symbol)
         if not match:
             raise ValueError(f"无效的期货代码格式: {symbol}")
@@ -63,7 +73,7 @@ class DataService:
         exchange = self.exchange_map.get(product_code.upper())
         if not exchange:
             raise ValueError(f"不支持的期货品种: {product_code}")
-        return f"{clean_symbol.lower()}.{exchange}"
+        return f"{clean_symbol.upper()}.{exchange}"
 
     def _validate_index_symbol(self, symbol: str) -> str:
         """验证和格式化指数代码"""
@@ -110,11 +120,16 @@ class DataService:
 
             # 根据数据类型获取不同的数据
             if data_type == 'futures':
+                # 检查是否只有品种代码
+                if '.' in symbol and symbol.split('.')[0].isalpha():
+                    # 获取当前交易的合约
+                    symbol = self.get_current_future_contract(symbol, end_date)
+                    logging.info(f"使用当前可交易合约: {symbol}")
+
                 df = self.pro.fut_daily(ts_code=symbol, start_date=start_date, end_date=end_date)
                 if df.empty:
-                    symbol = self.get_current_future_contract(symbol, end_date)
-                    logging.info(f"尝试获取当前可交易合约: {symbol}")
-                    df = self.pro.fut_daily(ts_code=symbol, start_date=start_date, end_date=end_date)
+                    raise ValueError(f"未找到 {symbol} 从 {start_date} 到 {end_date} 的数据")
+
             elif data_type == 'index':
                 df = self.pro.index_daily(ts_code=symbol, start_date=start_date, end_date=end_date)
             else:  # stock
@@ -130,8 +145,9 @@ class DataService:
 
             # 字段映射
             column_mapping = {
-                'vol': 'volume', 'amount': 'amount', 
-                'open': 'open', 'high': 'high', 'low': 'low', 'close': 'close'
+            'vol': 'volume', 'amount': 'amount', 
+            'open': 'open', 'high': 'high', 'low': 'low', 'close': 'close',
+            'settle': 'settle', 'oi': 'oi', 'oi_chg': 'oi_chg'
             }
             df.rename(columns={col: column_mapping.get(col, col) for col in df.columns}, inplace=True)
 
@@ -144,7 +160,7 @@ class DataService:
         """
         获取期货合约在指定日期内最近的有效合约。
         """
-        product = symbol.split('.')[0][:-4]  # 例如从 'IF2412.CFFEX' 提取 'IF'
+        product = symbol.split('.')[0]  # 例如从 'IF.CFFEX' 提取 'IF'
         exchange = symbol.split('.')[1]
 
         # 获取期货合约信息

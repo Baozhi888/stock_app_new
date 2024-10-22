@@ -1,6 +1,7 @@
 # 忽略环境变量文件
 .env
 venv/
+RB回测.py
 
 
 # Python相关
