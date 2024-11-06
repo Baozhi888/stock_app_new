@@ -293,6 +293,8 @@ class AnalysisService:
 
     def generate_analysis_chart(self, symbol: str, df: pd.DataFrame, start_date: str, end_date: str) -> str:
         try:
+            print(f"Generating chart for {symbol}")
+            
             # 确保目录存在
             os.makedirs('output', exist_ok=True)
             
@@ -304,8 +306,10 @@ class AnalysisService:
             plt.savefig(image_path, bbox_inches='tight', dpi=100)
             plt.close()
             
-            # 返回访问路径
-            return f"/output/{image_filename}"  # 直接返回 /output 路径
+            print(f"Saved chart to {image_path}")
+            
+            # 返回图片访问路径
+            return f"/get_image/{image_filename}"  # 修改这里返回新的端点路径
         except Exception as e:
             print(f"Error generating chart: {str(e)}")
             return None

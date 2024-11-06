@@ -22,10 +22,12 @@ app = FastAPI()
 # CORS 和静态文件设置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # 在生产环境中应该指定具体域名
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -217,8 +219,19 @@ async def health_check():
 async def get_image(filename: str):
     file_path = os.path.join("output", filename)
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(file_path)
+        raise HTTPException(status_code=404, detail=f"Image not found: {file_path}")
+    
+    # 添加自定义响应头
+    headers = {
+        "Cache-Control": "public, max-age=3600",
+        "Access-Control-Allow-Origin": "*"
+    }
+    
+    return FileResponse(
+        file_path, 
+        headers=headers,
+        media_type="image/png"
+    )
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

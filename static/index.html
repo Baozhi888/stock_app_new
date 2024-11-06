@@ -199,7 +199,7 @@
             radio.addEventListener('change', function() {
                 const helper = document.getElementById('symbol-helper');
                 if (this.value === 'stock') {
-                    helper.textContent = '��票代码示例: 000001';
+                    helper.textContent = '票代码示例: 000001';
                 } else if (this.value === 'futures') {
                     helper.textContent = '期货代码示例: if2403';
                 } else {
@@ -254,7 +254,6 @@
                 // 显示图片
                 if (data.chart_url) {
                     const chartImg = document.getElementById('chartImage');
-                    // 添��错误处理
                     chartImg.onerror = function() {
                         console.error('Failed to load image:', data.chart_url);
                         alert('图片加载失败，请重试');
@@ -262,7 +261,7 @@
                     chartImg.onload = function() {
                         console.log('Image loaded successfully:', data.chart_url);
                     };
-                    chartImg.src = data.chart_url;  // 使用返回的完整路径
+                    chartImg.src = data.chart_url;
                     chartImg.style.display = 'block';
                 }
 
