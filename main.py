@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from fastapi import FastAPI, HTTPException, Response
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from concurrent.futures import ThreadPoolExecutor
@@ -26,8 +26,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -214,24 +212,35 @@ async def get_json(symbol: str, start_date: str, end_date: str):
 async def health_check():
     return {"status": "healthy"}
 
-# 添加图片访问端点
+
+# 图片访问端点
 @app.get("/get_image/{filename}")
 async def get_image(filename: str):
     file_path = os.path.join("output", filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail=f"Image not found: {file_path}")
-    
-    # 添加自定义响应头
-    headers = {
-        "Cache-Control": "public, max-age=3600",
-        "Access-Control-Allow-Origin": "*"
-    }
-    
     return FileResponse(
-        file_path, 
-        headers=headers,
-        media_type="image/png"
+        file_path,
+        media_type="image/png",
+        headers={"Access-Control-Allow-Origin": "*"}
     )
+
+# JSON 文件访问端点
+@app.get("/get_json/{filename}")
+async def get_json(filename: str):
+    file_path = os.path.join("output", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"JSON file not found: {file_path}")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return JSONResponse(
+            content=data,
+            headers={"Access-Control-Allow-Origin": "*"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading JSON file: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

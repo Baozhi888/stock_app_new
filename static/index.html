@@ -256,7 +256,11 @@
                     const chartImg = document.getElementById('chartImage');
                     chartImg.onerror = function() {
                         console.error('Failed to load image:', data.chart_url);
-                        alert('图片加载失败，请重试');
+                        // 添加重试逻辑
+                        setTimeout(() => {
+                            console.log('Retrying image load...');
+                            chartImg.src = data.chart_url + '?t=' + new Date().getTime();
+                        }, 1000);
                     };
                     chartImg.onload = function() {
                         console.log('Image loaded successfully:', data.chart_url);
