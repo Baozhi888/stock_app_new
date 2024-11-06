@@ -24,6 +24,9 @@
             font-size: 14px;
             font-weight: normal;
             padding: 10px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
         }
         .container {
             padding: 20px;
@@ -78,6 +81,10 @@
         button:hover {
             background-color: #CC0000;
         }
+        button:disabled {
+            background-color: #CCCCCC;
+            cursor: not-allowed;
+        }
         .section {
             margin-bottom: 20px;
             padding: 15px;
@@ -91,11 +98,28 @@
             margin-top: 0;
         }
         .loading-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 16px;
             color: #FF0000;
             text-align: center;
             margin-bottom: 20px;
             display: none;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #FF0000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         .image-preview {
             max-width: 100%;
@@ -133,6 +157,34 @@
             font-size: 24px;
             cursor: pointer;
         }
+        .error-message {
+            color: #FF0000;
+            padding: 10px;
+            border: 1px solid #FF0000;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        #analysis-content {
+            line-height: 1.6;
+            text-align: justify;
+        }
+        .json-download {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #FF0000;
+            color: #FFFFFF;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .json-download:hover {
+            background-color: #CC0000;
+        }
     </style>
 </head>
 <body>
@@ -162,11 +214,14 @@
             <label for="end-date">结束日期:</label>
             <input type="date" id="end-date" name="end-date" required>
 
-            <button type="submit">开始分析</button>
+            <button type="submit" id="submit-btn">开始分析</button>
         </form>
     </div>
 
-    <div class="loading-message" id="loading-message">正在分析数据，请稍候...</div>
+    <div class="loading-message" id="loading-message">
+        <div class="loading-spinner"></div>
+        正在分析数据，请稍候...
+    </div>
 
     <div class="container">
         <div class="section" id="analysis-section" style="display:none;">
@@ -194,12 +249,45 @@
     </footer>
 
     <script>
+        // 页面加载时初始化日期
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const lastMonth = new Date(today);
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+            const startDate = document.getElementById('start-date');
+            const endDate = document.getElementById('end-date');
+
+            // 设置日期格式
+            startDate.max = today.toISOString().split('T')[0];
+            endDate.max = today.toISOString().split('T')[0];
+
+            // 设置默认值
+            startDate.value = lastMonth.toISOString().split('T')[0];
+            endDate.value = today.toISOString().split('T')[0];
+
+            // 添加日期验证
+            startDate.addEventListener('change', function() {
+                if (endDate.value && this.value > endDate.value) {
+                    alert('开始日期不能晚于结束日期');
+                    this.value = endDate.value;
+                }
+            });
+
+            endDate.addEventListener('change', function() {
+                if (startDate.value && this.value < startDate.value) {
+                    alert('结束日期不能早于开始日期');
+                    this.value = startDate.value;
+                }
+            });
+        });
+
         // 监听数据类型切换
         document.getElementsByName('data-type').forEach(radio => {
             radio.addEventListener('change', function() {
                 const helper = document.getElementById('symbol-helper');
                 if (this.value === 'stock') {
-                    helper.textContent = '票代码示例: 000001';
+                    helper.textContent = '股票代码示例: 000001';
                 } else if (this.value === 'futures') {
                     helper.textContent = '期货代码示例: if2403';
                 } else {
@@ -208,34 +296,54 @@
             });
         });
 
+        // 表单提交处理
         document.getElementById('analysis-form').addEventListener('submit', async function(event) {
             event.preventDefault();
-            const dataType = document.querySelector('input[name="data-type"]:checked').value;
-            const symbol = document.getElementById('symbol').value;
-            const startDate = document.getElementById('start-date').value;
-            const endDate = document.getElementById('end-date').value;
-
-            // 显示加载提示
+            const submitBtn = document.getElementById('submit-btn');
             const loadingMessage = document.getElementById('loading-message');
-            loadingMessage.style.display = 'block';
+            const form = document.getElementById('analysis-form');
+
+            // 禁用表单和按钮
+            submitBtn.disabled = true;
+            form.classList.add('loading');
+            loadingMessage.style.display = 'flex';
+
+            // 清空之前的结果
+            document.getElementById('analysis-content').innerHTML = '加载中...';
+            document.getElementById('analysis-image').src = '';
+            document.getElementById('json-link').href = '';
+            
+            ['analysis-section', 'image-section', 'json-section'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
 
             try {
+                const dataType = document.querySelector('input[name="data-type"]:checked').value;
+                const symbol = document.getElementById('symbol').value;
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+
                 const response = await fetch('/analyze/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        data_type: dataType,  // 添加数据类型
-                        symbol: symbol,
+                        data_type: dataType === 'stock' ? '股票' : 
+                                  dataType === 'futures' ? '期货' : '指数',
+                        symbol: symbol.toUpperCase(),
                         start_date: startDate,
-                        end_date: endDate,
-                        is_index: dataType === 'index'  // 添加is_index字段
+                        end_date: endDate
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
 
+                // 更新分析结果
                 document.getElementById('analysis-metadata').innerHTML = `
                     <strong>代码:</strong> ${data.symbol}<br>
                     <strong>类型:</strong> ${dataType === 'stock' ? '股票' : dataType === 'futures' ? '期货' : '指数'}<br>
@@ -244,52 +352,54 @@
                 `;
 
                 document.getElementById('analysis-content').innerHTML = formatAnalysis(data.analysis);
-                document.getElementById('analysis-image').src = data.image_path;
+
+                // 更新图片显示
+                const analysisImage = document.getElementById('analysis-image');
+                analysisImage.src = data.image_path;
+                analysisImage.onerror = function() {
+                    console.error('图片加载失败，尝试重新加载...');
+                    setTimeout(() => {
+                        this.src = data.image_path + '?t=' + new Date().getTime();
+                    }, 1000);
+                };
+
+                // 更新JSON链接
                 document.getElementById('json-link').href = data.json_file_url;
 
-                document.getElementById('analysis-section').style.display = 'block';
-                document.getElementById('image-section').style.display = 'block';
-                document.getElementById('json-section').style.display = 'block';
-
-                // 显示图片
-                if (data.chart_url) {
-                    const chartImg = document.getElementById('analysis-image');
-                    chartImg.onerror = function() {
-                        console.error('Failed to load image:', data.chart_url);
-                        setTimeout(() => {
-                            console.log('Retrying image load...');
-                            chartImg.src = data.chart_url + '?t=' + new Date().getTime();
-                        }, 1000);
-                    };
-                    chartImg.onload = function() {
-                        console.log('Image loaded successfully:', data.chart_url);
-                    };
-                    chartImg.src = data.chart_url;
-                    chartImg.style.display = 'block';
-                }
-
-                // JSON 文件链接
-                if (data.json_file_url) {
-                    document.getElementById('json-link').href = data.json_file_url;
-                    document.getElementById('json-section').style.display = 'block';
-                }
+                // 显示所有结果部分
+                ['analysis-section', 'image-section', 'json-section'].forEach(id => {
+                    document.getElementById(id).style.display = 'block';
+                });
 
             } catch (error) {
-                console.error('获取数据失败:', error);
-                document.getElementById('analysis-content').innerHTML = '分析内容加载失败。';
+                console.error('分析请求失败:', error);
+                document.getElementById('analysis-section').style.display = 'block';
+                document.getElementById('analysis-content').innerHTML = `
+                    <div class="error-message">
+                        分析请求失败：${error.message || '未知错误'}<br>
+                        请稍后重试或联系管理员
+                    </div>
+                `;
             } finally {
+                // 恢复表单和按钮状态
+                submitBtn.disabled = false;
+                form.classList.remove('loading');
                 loadingMessage.style.display = 'none';
             }
         });
 
+        // 格式化分析文本
         function formatAnalysis(text) {
+            if (!text) return '无分析结果';
             return text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n\n/g, '<p></p>')
-                .replace(/\n/g, '<br>');
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .trim()
+                .replace(/^(.*)$/, '<p>$1</p>');
         }
 
-        // 图片全屏显示相关代码
+        // 图片全屏显示处理
         const img = document.getElementById('analysis-image');
         const fullscreenImg = document.getElementById('fullscreen-img');
         const fullscreenImage = document.getElementById('fullscreen-image');
