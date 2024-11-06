@@ -253,10 +253,9 @@
 
                 // 显示图片
                 if (data.chart_url) {
-                    const chartImg = document.getElementById('chartImage');
+                    const chartImg = document.getElementById('analysis-image');
                     chartImg.onerror = function() {
                         console.error('Failed to load image:', data.chart_url);
-                        // 添加重试逻辑
                         setTimeout(() => {
                             console.log('Retrying image load...');
                             chartImg.src = data.chart_url + '?t=' + new Date().getTime();
@@ -267,6 +266,12 @@
                     };
                     chartImg.src = data.chart_url;
                     chartImg.style.display = 'block';
+                }
+
+                // JSON 文件链接
+                if (data.json_file_url) {
+                    document.getElementById('json-link').href = data.json_file_url;
+                    document.getElementById('json-section').style.display = 'block';
                 }
 
             } catch (error) {
