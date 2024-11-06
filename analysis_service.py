@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import os
 import tushare as ts
 from config import Settings
+import matplotlib.font_manager as fm
 
 load_dotenv()  # 加载 .env 文件
 api_key = os.getenv('API_KEY')
@@ -225,6 +226,12 @@ class AnalysisService:
         """
         绘制技术分析图
         """
+        
+        # 设置字体
+        plt.rcParams['font.family']=['SimHei']
+        plt.rcParams['font.sans-serif']=['SimHei']
+        plt.rcParams['axes.unicode_minus']=False
+
         os.makedirs(os.path.dirname(image_path), exist_ok=True)
         logging.info(f"Saving image to {image_path}")
         try:

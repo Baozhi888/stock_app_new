@@ -1,0 +1,10 @@
+version: '3'
+services:
+  stock_app:
+    image: kingjohn123/stock_app_new
+    ports:
+      - "9008:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - API_URL=${API_URL}
+    restart: always

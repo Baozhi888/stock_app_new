@@ -13,6 +13,7 @@ from data_service import DataService
 from models import AnalysisRequest, AnalysisResponse
 from datetime import date, datetime
 import tushare as ts
+import matplotlib.font_manager as fm
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +29,8 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# 添加字体文件路径
+fm.fontManager.addfont(path='./static/fonts/simhei.ttf')
 
 # 初始化服务
 settings = Settings()

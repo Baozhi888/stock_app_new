@@ -9,3 +9,6 @@ RB回测.py
 __pycache__/
 *.pyo
 *.pyd
+
+#保留文件夹
+output/*
