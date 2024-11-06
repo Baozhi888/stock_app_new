@@ -57,23 +57,32 @@ class DataService:
         """验证和格式化期货代码"""
         clean_symbol = re.sub(r'\.(CFFEX|SHFE|DCE|CZCE|INE|GFEX)$', '', symbol, flags=re.IGNORECASE)
         
-        # 检查是否只有品种代码（如 "IF"）
-        if clean_symbol.isalpha():
-            exchange = self.exchange_map.get(clean_symbol.upper())
-            if not exchange:
-                raise ValueError(f"不支持的期货品种: {clean_symbol}")
-            # 返回品种代码和交易所，具体合约会在 get_data 中处理
-            return f"{clean_symbol.upper()}.{exchange}"
-        
-        # 处理完整的合约代码
+        # 处理完整的合约代码（例如：IF2403）
         match = re.match(r'([A-Za-z]+)(\d+)', clean_symbol)
-        if not match:
-            raise ValueError(f"无效的期货代码格式: {symbol}")
-        product_code, _ = match.groups()
-        exchange = self.exchange_map.get(product_code.upper())
-        if not exchange:
-            raise ValueError(f"不支持的期货品种: {product_code}")
-        return f"{clean_symbol.upper()}.{exchange}"
+        if match:
+            product_code, contract_month = match.groups()
+            product_code = product_code.upper()
+            
+            # 验证品种代码
+            exchange = self.exchange_map.get(product_code)
+            if not exchange:
+                raise ValueError(f"不支持的期货品种: {product_code}")
+                
+            # 验证合约月份格式（应该是4位数字，如2403）
+            if len(contract_month) != 4:
+                raise ValueError(f"无效的合约月份格式: {contract_month}")
+                
+            return f"{product_code}{contract_month}.{exchange}"
+        
+        # 处理品种代码（例如：IF）
+        if clean_symbol.isalpha():
+            product_code = clean_symbol.upper()
+            exchange = self.exchange_map.get(product_code)
+            if not exchange:
+                raise ValueError(f"不支持的期货品种: {product_code}")
+            return f"{product_code}.{exchange}"
+            
+        raise ValueError(f"无效的期货代码格式: {symbol}")
 
     def _validate_index_symbol(self, symbol: str) -> str:
         """验证和格式化指数代码"""
@@ -120,15 +129,55 @@ class DataService:
 
             # 根据数据类型获取不同的数据
             if data_type == 'futures':
-                # 检查是否只有品种代码
-                if '.' in symbol and symbol.split('.')[0].isalpha():
-                    # 获取当前交易的合约
-                    symbol = self.get_current_future_contract(symbol, end_date)
-                    logging.info(f"使用当前可交易合约: {symbol}")
+                # 解析合约信息
+                match = re.match(r'([A-Za-z]+)(\d{4})\.(.*)', symbol)
+                if match:
+                    product, contract_month, exchange = match.groups()
+                    
+                    # 获取当前可交易的合约
+                    current_contracts = self.pro.fut_basic(
+                        exchange=exchange,
+                        fut_type='1',
+                        fields='ts_code,symbol,list_date,delist_date'
+                    )
+                    
+                    # 过滤出指定品种的合约
+                    product_contracts = current_contracts[
+                        current_contracts['ts_code'].str.startswith(f"{product}")
+                    ]
+                    
+                    if product_contracts.empty:
+                        raise ValueError(f"未找到 {product} 的可交易合约")
+                    
+                    # 获取最近的可交易合约
+                    valid_contract = product_contracts.sort_values('delist_date', ascending=False).iloc[0]
+                    symbol = valid_contract['ts_code']
+                    logging.info(f"使用最近可交易合约: {symbol}")
 
-                df = self.pro.fut_daily(ts_code=symbol, start_date=start_date, end_date=end_date)
+                # 获取期货数据
+                df = self.pro.fut_weekly_monthly(
+                    ts_code=symbol,
+                    start_date=start_date,
+                    end_date=end_date,
+                    freq='week'
+                )
+                
+                if df.empty:
+                    # 如果周线数据为空，尝试获取日线数据
+                    df = self.pro.fut_daily(
+                        ts_code=symbol,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+
                 if df.empty:
                     raise ValueError(f"未找到 {symbol} 从 {start_date} 到 {end_date} 的数据")
+
+                # 处理期货特有字段
+                df['amount'] = df['amount'].fillna(0)
+                df['oi'] = df['oi'].fillna(0)
+                df['oi_chg'] = df['oi_chg'].fillna(0)
+                df['settle'] = df['settle'].fillna(df['close'])
 
             elif data_type == 'index':
                 df = self.pro.index_daily(ts_code=symbol, start_date=start_date, end_date=end_date)
@@ -143,11 +192,19 @@ class DataService:
             df.set_index('date', inplace=True)
             df.sort_index(inplace=True)
 
-            # 字段映射
+            # 更新字段映射以包含期货特有字段
             column_mapping = {
-            'vol': 'volume', 'amount': 'amount', 
-            'open': 'open', 'high': 'high', 'low': 'low', 'close': 'close',
-            'settle': 'settle', 'oi': 'oi', 'oi_chg': 'oi_chg'
+                'vol': 'volume',
+                'amount': 'amount',
+                'open': 'open',
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'settle': 'settle',
+                'oi': 'oi',
+                'oi_chg': 'oi_chg',
+                'change1': 'price_change',
+                'change2': 'settle_change'
             }
             df.rename(columns={col: column_mapping.get(col, col) for col in df.columns}, inplace=True)
 
@@ -158,34 +215,36 @@ class DataService:
 
     def get_current_future_contract(self, symbol: str, date: str) -> str:
         """
-        获取期货合约在指定日期内最近的有效合约。
+        获取期货品种当前最活跃的合约。
         """
-        product = symbol.split('.')[0]  # 例如从 'IF.CFFEX' 提取 'IF'
-        exchange = symbol.split('.')[1]
+        try:
+            product = symbol.split('.')[0]  # 例如从 'IF.CFFEX' 提取 'IF'
+            exchange = symbol.split('.')[1]
 
-        # 获取期货合约信息
-        future_info = self.pro.fut_basic(exchange=exchange, fut_type='1', fields='ts_code,symbol,list_date,delist_date')
+            # 获取所有可交易的合约
+            future_info = self.pro.fut_basic(
+                exchange=exchange,
+                fut_type='1',
+                fields='ts_code,symbol,list_date,delist_date,oi'
+            )
 
-        # 过滤出指定日期可交易的合约
-        valid_contracts = future_info[
-            (future_info['symbol'].str.startswith(product)) &
-            (future_info['list_date'] <= date) &
-            (future_info['delist_date'] >= date)
-        ]
-
-        if valid_contracts.empty:
-            # 获取未来可交易的合约
-            future_contracts = future_info[
-                (future_info['symbol'].str.startswith(product)) &
-                (future_info['list_date'] > date)
+            # 过滤出指定品种的合约
+            valid_contracts = future_info[
+                future_info['ts_code'].str.startswith(product)
             ]
-            if not future_contracts.empty:
-                return future_contracts.sort_values('list_date').iloc[0]['ts_code']
-            else:
-                raise ValueError(f"未找到 {date} 日及之后可交易的 {product} 合约")
 
-        # 返回最近的到期合约
-        return valid_contracts.sort_values('ts_code').iloc[0]['ts_code']
+            if valid_contracts.empty:
+                raise ValueError(f"未找到 {product} 的可交易合约")
+
+            # 按照持仓量排序，获取最活跃的合约
+            active_contract = valid_contracts.sort_values('oi', ascending=False).iloc[0]
+            
+            logging.info(f"选择合约 {active_contract['ts_code']} 作为当前活跃合约")
+            return active_contract['ts_code']
+
+        except Exception as e:
+            logging.error(f"获取当前期货合约时发生错误: {str(e)}")
+            raise ValueError(f"获取当前期货合约失败: {str(e)}")
 
     def is_valid_futures_contract(self, symbol: str, start_date: str, end_date: str) -> bool:
         """
