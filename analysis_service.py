@@ -197,7 +197,7 @@ class AnalysisService:
         - 建议的止损位可以设在{min(last_price * 0.95, channel_lower):.2f}附近，止盈位可以考虑设在{max(last_price * 1.05, channel_upper):.2f}附近。
 
         9. 未来展望：
-        - 基于当前趋势和指标，预测未来5个交易日的可能价格区间为{last_price * (1 - volatility/100):.2f}到{last_price * (1 + volatility/100):.2f}。
+        - 基于当前趋��和指标，预测未来5个交易日的可能价格区间为{last_price * (1 - volatility/100):.2f}到{last_price * (1 + volatility/100):.2f}。
         - 分析可能影响价格的关键因素，包括技术面和可能的基本面因素。
 
         请确保分析全面、客观，并提供具体、可操作的建议。考虑到市场的不确定性，也请说明在哪些情况下可能需要调整策略。
@@ -257,7 +257,7 @@ class AnalysisService:
 
             plt.subplot(5, 1, 4)
             plt.plot(df.index, df['channel_upper'], label='通道上轨', color='r')
-            plt.plot(df.index, df['channel_lower'], label='通道下轨', color='b')
+            plt.plot(df.index, df['channel_lower'], label='通道���轨', color='b')
             plt.plot(df.index, df['close'], label='收盘价', color='y')
             plt.title(f'{symbol} 趋势通道')
             plt.legend()

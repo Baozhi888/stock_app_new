@@ -1,12 +1,25 @@
-# 忽略环境变量文件
+# Environment
 .env
 venv/
-RB回测.py
+__pycache__/
 
+# Output files
+output/*
+!output/.gitkeep
+
+# Static files
+static/images/*
+!static/images/.gitkeep
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
 
 # Python相关
 *.pyc
-__pycache__/
 *.pyo
 *.pyd
 

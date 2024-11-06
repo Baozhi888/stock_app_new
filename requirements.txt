@@ -1,41 +1,29 @@
-# Data Analysis & Machine Learning
+# Core Dependencies
+fastapi==0.104.0
+uvicorn[standard]==0.23.2
+pydantic==2.5.2
+pydantic-settings==2.0.0
+python-dotenv==1.0.0
+
+# Data Analysis
 tushare==1.4.13
-pandas>=1.5.3
-numpy>=1.24.3
-matplotlib>=3.7.1
+pandas==1.5.3
+numpy==1.24.3
 
-# API Framework
-fastapi>=0.104.0
-uvicorn>=0.23.2
-pydantic>=2.5.2
-pydantic-settings>=2.0.0
-python-dotenv>=1.0.0
-requests>=2.31.0
+# Visualization
+matplotlib==3.7.1
+seaborn==0.12.2
 
-# API Middleware & Utilities
-python-multipart>=0.0.6
-aiofiles>=23.2.1
-httpx>=0.25.0
+# HTTP Client
+requests==2.31.0
+httpx==0.25.0
 
-# Development & Testing
-pytest>=7.4.2
-pytest-asyncio>=0.21.1
-black>=23.9.1
-flake8>=6.1.0
+# API Utilities
+python-multipart==0.0.6
+aiofiles==23.2.1
 
-# Documentation
-mkdocs>=1.5.3
-mkdocs-material>=9.4.6
+# Time Zone
+pytz==2023.3
 
-# Optimization & Performance
-numpy>=1.24.3
-
-# Plotting & Visualization
-matplotlib>=3.7.1
-seaborn>=0.12.2
-
-# Additional Dependencies
-python-dateutil>=2.8.2
-pytz>=2023.3
-six>=1.16.0
-typing-extensions>=4.8.0
+# Type Hints
+typing-extensions==4.8.0

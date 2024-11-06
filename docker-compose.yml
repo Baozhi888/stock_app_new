@@ -1,10 +1,21 @@
-version: '3'
 services:
   stock_app:
+    build: .
     image: kingjohn123/stock_app_new
+    container_name: stock_analysis_app
     ports:
       - "9008:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - API_URL=${API_URL}
+      - TUSHARE_TOKEN=${TUSHARE_TOKEN}
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./output:/app/output
+      - ./static:/app/static
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

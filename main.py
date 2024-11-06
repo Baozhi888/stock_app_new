@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from fastapi import FastAPI, HTTPException, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +29,7 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/output", StaticFiles(directory="output"), name="output")
 # 添加字体文件路径
 fm.fontManager.addfont(path='./static/fonts/simhei.ttf')
 
@@ -98,15 +99,9 @@ def save_json_analysis(symbol: str, start_date: str, end_date: str, analysis: st
         logging.error(f"保存 JSON 文件失败: {e}")
 
 
-@app.get("/", response_class=HTMLResponse)
-def read_root():
-    file_path = os.path.abspath("static/index.html")
-    try:
-        with open(file_path, "r", encoding="utf-8") as file:
-            return HTMLResponse(content=file.read())
-    except FileNotFoundError:
-        return HTMLResponse(content="文件未找到", status_code=404)
-    
+@app.get("/")
+async def read_root():
+    return FileResponse("static/index.html")
 
 # 数据分析异步处理
 async def analyze_data_async(request: AnalysisRequest) -> AnalysisResponse:
@@ -199,6 +194,9 @@ async def get_json(symbol: str, start_date: str, end_date: str):
         logging.error(f"读取 JSON 文件时发生未知错误: {json_filename}, 错误: {str(e)}")
         raise HTTPException(status_code=500, detail="读取 JSON 文件时发生错误")
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
