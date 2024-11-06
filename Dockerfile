@@ -1,10 +1,11 @@
 # 构建阶段
-FROM python:3.9-slim-bullseye as builder
+FROM python:3.9-slim-bullseye AS builder
 
 WORKDIR /app
 
 # 只安装必要的构建工具
-RUN apt-get update && \
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
@@ -25,8 +26,9 @@ WORKDIR /app
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# 只安装必要的运行时依赖
-RUN apt-get update && \
+# 使用国内源并安装必要的运行时依赖
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     fonts-wqy-zenhei \
     && rm -rf /var/lib/apt/lists/*

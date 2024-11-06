@@ -1,5 +1,7 @@
+
 services:
   stock_app:
+    build: .
     image: kingjohn123/stock_app_new:latest
     container_name: stock_analysis_app
     ports:
@@ -10,11 +12,15 @@ services:
       - TUSHARE_TOKEN=${TUSHARE_TOKEN}
       - TZ=Asia/Shanghai
     volumes:
-      - ./output:/app/output
-      - ./static:/app/static
+      - stock_output:/app/output
+      - stock_static:/app/static
     restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  stock_output:
+  stock_static:

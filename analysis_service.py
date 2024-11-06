@@ -197,7 +197,7 @@ class AnalysisService:
         - 建议的止损位可以设在{min(last_price * 0.95, channel_lower):.2f}附近，止盈位可以考虑设在{max(last_price * 1.05, channel_upper):.2f}附近。
 
         9. 未来展望：
-        - 基于当前趋��和指标，预测未来5个交易日的可能价格区间为{last_price * (1 - volatility/100):.2f}到{last_price * (1 + volatility/100):.2f}。
+        - 基于当前趋势和指标，预测未来5个交易日的可能价格区间为{last_price * (1 - volatility/100):.2f}到{last_price * (1 + volatility/100):.2f}。
         - 分析可能影响价格的关键因素，包括技术面和可能的基本面因素。
 
         请确保分析全面、客观，并提供具体、可操作的建议。考虑到市场的不确定性，也请说明在哪些情况下可能需要调整策略。
@@ -257,7 +257,7 @@ class AnalysisService:
 
             plt.subplot(5, 1, 4)
             plt.plot(df.index, df['channel_upper'], label='通道上轨', color='r')
-            plt.plot(df.index, df['channel_lower'], label='通道���轨', color='b')
+            plt.plot(df.index, df['channel_lower'], label='通道轨', color='b')
             plt.plot(df.index, df['close'], label='收盘价', color='y')
             plt.title(f'{symbol} 趋势通道')
             plt.legend()
@@ -290,3 +290,22 @@ class AnalysisService:
         output_filename = f"./output/{symbol}_{start_date}_{end_date}_analysis.json"
         with open(output_filename, "w", encoding="utf-8") as json_file:
             json.dump(analysis_result, json_file, ensure_ascii=False, indent=4)
+
+    def generate_analysis_chart(self, symbol: str, df: pd.DataFrame, start_date: str, end_date: str) -> str:
+        try:
+            # 确保目录存在
+            os.makedirs('output', exist_ok=True)
+            
+            # 生成图片文件名
+            image_filename = f"{symbol}_{start_date}_{end_date}.png"
+            image_path = os.path.join('output', image_filename)
+            
+            # 保存图片
+            plt.savefig(image_path, bbox_inches='tight', dpi=100)
+            plt.close()
+            
+            # 返回访问路径
+            return f"/output/{image_filename}"  # 直接返回 /output 路径
+        except Exception as e:
+            print(f"Error generating chart: {str(e)}")
+            return None

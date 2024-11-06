@@ -39,6 +39,20 @@ data_service = DataService(settings.TUSHARE_TOKEN)
 analysis_service = AnalysisService(settings)
 executor = ThreadPoolExecutor(max_workers=5)
 
+# 确保目录存在
+os.makedirs("output", exist_ok=True)
+os.makedirs("static/images", exist_ok=True)
+
+# 挂载静态文件目录
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/output/{filename}")
+async def get_output_file(filename: str):
+    file_path = os.path.join("output", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
+
 # 实施日期验证功能，确保请求的日期范围有效
 def validate_date_range(start_date: str, end_date: str) -> tuple[date, date]:
     today = date.today()
@@ -197,6 +211,14 @@ async def get_json(symbol: str, start_date: str, end_date: str):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+# 添加图片访问端点
+@app.get("/get_image/{filename}")
+async def get_image(filename: str):
+    file_path = os.path.join("output", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
