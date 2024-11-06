@@ -10,6 +10,7 @@ output/*
 # Static files
 static/images/*
 !static/images/.gitkeep
+echo "nginx.conf" >> .gitignore
 
 # Logs
 *.log
