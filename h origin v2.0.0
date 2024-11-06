@@ -1,0 +1,25 @@
+[33mtag v2.0.0[m
+Tagger: KingJohn <Kj331704@gmail.com>
+Date:   Wed Nov 6 11:34:14 2024 +0800
+
+Release version 2.0.0: Stock analysis app with futures support
+
+[33mcommit 01b2ebc1b6c3d3fc35cc2a1ad20e283b6bf9f349[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mv2.0.0[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: KingJohn <Kj331704@gmail.com>
+Date:   Wed Nov 6 11:24:04 2024 +0800
+
+    完善READEME.md
+
+[1mdiff --git a/README.md b/README.md[m
+[1mindex 9138c33..f8ee6c2 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -126,7 +126,7 @@[m [mproject_root/[m
+ [m
+ ## 📝 版本历史[m
+ [m
+[31m-### v1.0.0 (2024-02-08)[m
+[32m+[m[32m### v2.0.0 (2024-11-06)[m
+ [m
+ - 🎉 初始版本发布[m
+ - ✨ 支持股票、期货和指数分析[m

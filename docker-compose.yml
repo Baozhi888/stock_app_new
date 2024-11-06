@@ -1,7 +1,6 @@
 services:
   stock_app:
-    build: .
-    image: kingjohn123/stock_app_new
+    image: kingjohn123/stock_app_new:latest
     container_name: stock_analysis_app
     ports:
       - "9008:8000"

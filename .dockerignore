@@ -12,3 +12,9 @@ venv/
 .pytest_cache
 output/*
 static/images/*
+.vscode
+.idea
+*.md
+docker-compose*
+Dockerfile*
+.dockerignore
