@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
     API_URL: str = Field(..., env="API_URL")
     MODEL_NAME: str = "groq"
-    BASE_URL: str = "http://localhost:9008"
+    BASE_URL: str = Field(default="", env="BASE_URL")
     FONT_PATH: str = "./static/fonts/imhei.ttf"
     FUTURES_EXCHANGE: str = "CFFEX"  # 中金所
     FUTURES_TYPES: list = ["IF", "IC", "IH"]  # 主要股指期货品种

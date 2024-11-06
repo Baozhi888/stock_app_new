@@ -43,9 +43,6 @@ executor = ThreadPoolExecutor(max_workers=5)
 os.makedirs("output", exist_ok=True)
 os.makedirs("static/images", exist_ok=True)
 
-# 挂载静态文件目录
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 @app.get("/output/{filename}")
 async def get_output_file(filename: str):
     file_path = os.path.join("output", filename)
@@ -150,14 +147,10 @@ async def analyze_data_async(request: AnalysisRequest) -> AnalysisResponse:
         # 保存 JSON 分析结果
         save_json_analysis(request.symbol, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), gpt_analysis)
 
-        # 返回 JSON 和图片链接
-        json_file_url = f"{settings.BASE_URL}/get_json/{request.symbol}_{start_date}_{end_date}"
-        image_api_url = f"{settings.BASE_URL}/get_image/{request.symbol}_{start_date}_{end_date}.png"
-
         return AnalysisResponse(
             message=f"分析完成 {request.data_type} {request.symbol}",
-            image_path=image_api_url,
-            json_file_url=json_file_url,
+            image_path=f"/get_image/{request.symbol}_{start_date}_{end_date}.png",  # 使用相对路径
+            json_file_url=f"/get_json/{request.symbol}_{start_date}_{end_date}",    # 使用相对路径
             symbol=request.symbol,
             start_date=start_date.strftime("%Y-%m-%d"),
             end_date=end_date.strftime("%Y-%m-%d"),
@@ -184,7 +177,11 @@ async def get_image(symbol: str, start_date: str, end_date: str):
         logging.error(f"Image not found at {image_path}")
         raise HTTPException(status_code=404, detail="图像未找到")
     
-    return Response(content=open(image_path, "rb").read(), media_type="image/png")
+    return FileResponse(
+        image_path,
+        media_type="image/png",
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 @app.get("/get_json/{symbol}_{start_date}_{end_date}")
 async def get_json(symbol: str, start_date: str, end_date: str):
@@ -212,35 +209,6 @@ async def get_json(symbol: str, start_date: str, end_date: str):
 async def health_check():
     return {"status": "healthy"}
 
-
-# 图片访问端点
-@app.get("/get_image/{filename}")
-async def get_image(filename: str):
-    file_path = os.path.join("output", filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail=f"Image not found: {file_path}")
-    return FileResponse(
-        file_path,
-        media_type="image/png",
-        headers={"Access-Control-Allow-Origin": "*"}
-    )
-
-# JSON 文件访问端点
-@app.get("/get_json/{filename}")
-async def get_json(filename: str):
-    file_path = os.path.join("output", filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail=f"JSON file not found: {file_path}")
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return JSONResponse(
-            content=data,
-            headers={"Access-Control-Allow-Origin": "*"}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading JSON file: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
